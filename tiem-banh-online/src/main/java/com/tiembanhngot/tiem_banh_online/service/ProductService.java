@@ -1,13 +1,11 @@
-
 package com.tiembanhngot.tiem_banh_online.service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Optional;
+
+import com.tiembanhngot.tiem_banh_online.entity.Category;
+import com.tiembanhngot.tiem_banh_online.entity.Product;
+import com.tiembanhngot.tiem_banh_online.exception.ProductNotFoundException;
+import com.tiembanhngot.tiem_banh_online.repository.ProductRepository;
+
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,9 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.tiembanhngot.tiem_banh_online.entity.Product;
-import com.tiembanhngot.tiem_banh_online.exception.ProductNotFoundException;
-import com.tiembanhngot.tiem_banh_online.repository.ProductRepository;
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -69,14 +72,15 @@ public class ProductService {
 
         try {
             return productRepository.save(product);
-        } catch (DataIntegrityViolationException e) {
+            } catch (DataIntegrityViolationException e) {
             String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
             if (msg.contains("name")) {
                 throw new DataIntegrityViolationException("Tên sản phẩm đã tồn tại.", e);
             }
             throw new RuntimeException("Lỗi khi lưu sản phẩm.", e);
-        }
+            }
     }
+    
 
     public Product updateProduct(Product product, MultipartFile image) throws IOException {
         Product existing = productRepository.findById(product.getProductId())
@@ -95,7 +99,6 @@ public class ProductService {
         } else {
             product.setImageUrl(existing.getImageUrl());
         }
-
         return productRepository.save(product);
     }
 
@@ -118,4 +121,24 @@ public class ProductService {
             throw new DataIntegrityViolationException("Không thể xóa sản phẩm vì ràng buộc dữ liệu.", e);
         }
     }
+
+    public Map<Category, List<Product>> getProductsGroupedByCategory() {
+        List<Product> products = findAllAvailableProducts();
+
+        Map<Category, List<Product>> grouped = products.stream()
+            .filter(p -> p.getCategory() != null)
+            .collect(Collectors.groupingBy(Product::getCategory));
+
+        return grouped.entrySet().stream()
+            .sorted(Comparator.comparing(e -> e.getKey().getCategoryId()))
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (e1, e2) -> e1,
+                LinkedHashMap::new
+            ));
+    }
+
+
 }
+
