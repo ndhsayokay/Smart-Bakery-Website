@@ -60,7 +60,6 @@ public class AdminProductController {
         return "admin/product/list";
     }
 
-    // Hiển thị form thêm
     @GetMapping("/add")
     public String showAddProductForm(Model model) {
         model.addAttribute("product", new Product());
@@ -116,6 +115,7 @@ public class AdminProductController {
         boolean isNew = (product.getProductId() == null);
         String pageTitle = isNew ? "Thêm Sản Phẩm Mới" : "Chỉnh Sửa Sản Phẩm (ID: " + product.getProductId() + ")";
         model.addAttribute("pageTitle", pageTitle);
+        
         // Kiểm tra danh mục
         if (product.getCategory() == null || product.getCategory().getCategoryId() == null) {
             bindingResult.rejectValue("category", "NotEmpty.product.category", "Vui lòng chọn danh mục.");
@@ -130,7 +130,6 @@ public class AdminProductController {
         }
 
         try {
-            // Dùng ProductService để xử lý upload ảnh và lưu DB
             productService.saveProduct(product, imageFile);
             redirectAttributes.addFlashAttribute("successMessage",
                     (isNew ? "Đã thêm" : "Đã cập nhật") + " sản phẩm '" + product.getName() + "' thành công!");
@@ -145,9 +144,7 @@ public class AdminProductController {
 
         } catch (DataIntegrityViolationException e) {
             String message = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
-            if (message.contains("slug")) {
-                bindingResult.rejectValue("slug", "duplicate.slug", "Slug đã tồn tại.");
-            } else if (message.contains("name")) {
+            if (message.contains("name")) {
                 bindingResult.rejectValue("name", "duplicate.name", "Tên sản phẩm đã tồn tại.");
             } else {
                 model.addAttribute("errorMessage", "Lỗi ràng buộc dữ liệu.");
