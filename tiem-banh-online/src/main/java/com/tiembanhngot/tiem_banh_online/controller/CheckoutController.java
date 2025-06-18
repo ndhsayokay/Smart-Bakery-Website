@@ -46,7 +46,6 @@ public class CheckoutController {
         return cart != null ? cart : new CartDTO();
     }
 
-
     @GetMapping
     public String showCheckoutPage(Model model, Authentication authentication, HttpSession session) {
 

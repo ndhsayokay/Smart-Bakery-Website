@@ -108,7 +108,7 @@ public class AdminCategoryController {
             redirectAttributes.addFlashAttribute("successMessage", "Đã " + (isNew ? "thêm" : "cập nhật") + " danh mục thành công!");
             log.info("Category {} successfully.", isNew ? "created" : "updated");
             return "redirect:/admin/categories";
-        } catch (DataIntegrityViolationException e) { // Bắt lỗi trùng tên
+        } catch (DataIntegrityViolationException e) { // lỗi trùng tên
             log.error("Data integrity violation while saving category {}: {}", category.getName(), e.getMessage());
             if(e.getMessage() != null && e.getMessage().toLowerCase().contains("name")) {
                 bindingResult.rejectValue("name", "duplicate.name", e.getMessage());
