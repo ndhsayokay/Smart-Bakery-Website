@@ -11,8 +11,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
 
-// @Service
-// public class RAGService {
+@Service
+public class RAGService {
 
     @Autowired
     private VectorDBService vectorDBService;
