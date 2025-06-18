@@ -28,12 +28,12 @@ public class ProductPageController {
         return "product/list";
     }
 
-    @GetMapping("/{slug}")
-    public String productDetail(@PathVariable String slug, Model model) { // Thêm Model
+    @GetMapping("/{name}")
+    public String productDetail(@PathVariable String name, Model model) { // Thêm Model
          model.addAttribute("currentPage", "products"); // Trang chi tiết vẫn thuộc mục sản phẩm
-        Product product = productService.findBySlug(slug)
+        Product product = productService.findByName(name)
                 // Ném lỗi 404 nếu không tìm thấy
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm với slug: " + slug));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm với ten: " + name));
         model.addAttribute("product", product);
         return "product/detail";
     }

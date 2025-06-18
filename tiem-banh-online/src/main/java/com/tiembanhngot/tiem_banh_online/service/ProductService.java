@@ -56,9 +56,9 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Product> findBySlug(String slug) {
-        log.debug("Finding product by slug: {}", slug);
-        return productRepository.findByName(slug);
+    public Optional<Product> findByName(String name) {
+        log.debug("Finding product by slug: {}", name);
+        return productRepository.findByName(name);
     }
 
     // --- Phương thức cho trang Admin ---

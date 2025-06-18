@@ -30,58 +30,48 @@ public class DataLoader implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final PasswordEncoder passwordEncoder;
 
-    // === CHỈ GIỮ LẠI PHIÊN BẢN PHƯƠNG THỨC NÀY (7 THAM SỐ) ===
-    @Transactional // Đặt Transactional ở đây cũng được
-    Product createProductIfNotFound(String name, String slug, String description,
+    @Transactional
+    Product createProductIfNotFound(String name, String description,
                                     BigDecimal defaultPrice, String imageUrl, Category category,
-                                    Map<String, BigDecimal> sizeOptions) { // Thêm tham số sizeOptions
+                                    Map<String, BigDecimal> sizeOptions) { 
         Optional<Product> prodOpt = productRepository.findByName(name);
         if (prodOpt.isEmpty()) {
             Product newProduct = new Product();
             newProduct.setName(name);
-           
             newProduct.setDescription(description);
-            newProduct.setPrice(defaultPrice); // Giá mặc định/cơ bản
-            newProduct.setImageUrl(imageUrl); // URL ảnh mẫu (vd: /img/...)
+            newProduct.setPrice(defaultPrice); 
+            newProduct.setImageUrl(imageUrl);
             newProduct.setCategory(category);
             newProduct.setIsAvailable(true);
             newProduct.setCategory(category);
-            // Set size options nếu được cung cấp và không rỗng
+            newProduct.setSizeOptions(sizeOptions);
             if (sizeOptions != null && !sizeOptions.isEmpty()) {
-                newProduct.setSizeOptions(new HashMap<>(sizeOptions)); // Tạo bản sao để an toàn
+                newProduct.setSizeOptions(new HashMap<>(sizeOptions)); 
             } else {
-                 newProduct.setSizeOptions(new HashMap<>()); // Luôn khởi tạo Map rỗng
+                 newProduct.setSizeOptions(new HashMap<>());
             }
 
-            log.info("Creating product (DataLoader): Name='{}', Slug='{}', Image='{}', Sizes='{}'",
+            log.info("Creating product (DataLoader): Name='{}', Image='{}', Sizes='{}'",
                      name, newProduct.getName(), imageUrl, newProduct.getSizeOptions());
             return productRepository.save(newProduct);
         } else {
-             log.info("Product with slug '{}' already exists. Skipping creation.", slug);
+             log.info("Product with name '{}' already exists. Skipping creation.", name);
              return prodOpt.get();
         }
     }
-    // === KẾT THÚC PHIÊN BẢN PHƯƠNG THỨC MỚI ===
 
 
     @Override
-    @Transactional // Đảm bảo tất cả các thao tác DB trong hàm này là một giao dịch
+    @Transactional
     public void run(String... args) throws Exception {
         log.info("Loading initial data...");
 
-        // 2. Tạo User Admin
         createUserIfNotFound("admin@tiembanh.com", "Admin User", "Admin123", "0900000000", User.Role.ADMIN);
-        // createUserIfNotFound("customer@email.com", "Customer Name", "Cust123", "0911111111", customerRole);
 
-        // 3. Tạo Categories
         Category banhKem = createCategoryIfNotFound("Bánh Kem", "Các loại bánh kem sinh nhật, lễ kỷ niệm");
         Category pastry = createCategoryIfNotFound("Pastry", "Bánh ngọt kiểu Âu");
         Category banhMi = createCategoryIfNotFound("Bánh Mì Ngọt", "Các loại bánh mì ăn sáng, ăn nhẹ");
         Category cookies = createCategoryIfNotFound("Cookies", "Bánh quy các loại");
-
-        // --- 4. Tạo Products ---
-        // Đảm bảo đường dẫn ảnh trỏ đến file có thật trong /static/img/...
-        // Đảm bảo truyền tham số thứ 7 (sizeOptions) là null hoặc Map
 
         if (banhKem != null) {
             // Sản phẩm có size
@@ -90,67 +80,65 @@ public class DataLoader implements CommandLineRunner {
             dauSizes.put("Vừa (22cm)", new BigDecimal("450000.00"));
             dauSizes.put("Lớn (25cm)", new BigDecimal("550000.00"));
             createProductIfNotFound(
-                "Bánh Kem Dâu Tươi", "banh-kem-dau-tuoi",
+                "Bánh Kem Dâu Tươi", 
                 "Bánh kem mềm mịn với lớp kem tươi và dâu tây Đà Lạt.",
-                new BigDecimal("350000.00"), // Giá mặc định (size nhỏ nhất)
-                "/img/products/banhkem_dau.jpg", // <<< Đảm bảo ảnh này tồn tại
+                new BigDecimal("350000.00"), 
+                "/img/products/banhkem_dau.jpg", 
                 banhKem,
-                dauSizes // <<< Truyền Map size vào
+                dauSizes 
             );
 
-            // Sản phẩm không có size
             createProductIfNotFound(
-                "Bánh Kem Chocolate", "banh-kem-chocolate",
+                "Bánh Kem Chocolate",
                 "Cốt bánh chocolate ẩm, phủ ganache chocolate đậm đà.",
                 new BigDecimal("380000.00"),
-                "/img/products/banhkem_socola.jpg", // <<< Đảm bảo ảnh này tồn tại
+                "/img/products/banhkem_socola.jpg", 
                 banhKem,
-                null // <<< Truyền null cho sizeOptions
+                null 
             );
         }
 
         if (pastry != null) {
-             // Sản phẩm không có size
             createProductIfNotFound(
-                "Croissant Bơ", "croissant-bo",
+                "Croissant Bơ", 
                 "Bánh sừng bò ngàn lớp, thơm lừng mùi bơ Pháp.",
                 new BigDecimal("30000.00"),
-                "/img/products/croissant.jpg", // <<< Đảm bảo ảnh này tồn tại
+                "/img/products/croissant.jpg",
                 pastry,
-                null // <<< Truyền null
+                null 
             );
-             // Sản phẩm không có size
+
             createProductIfNotFound(
-                "Pain au Chocolat", "pain-au-chocolat",
+                "Pain au Chocolat", 
                 "Bánh mì cuộn socola đen.",
                 new BigDecimal("35000.00"),
-                "/img/products/PainauChocolat.jpg", // <<< Đảm bảo ảnh này tồn tại
+                "/img/products/PainauChocolat.jpg", 
                 pastry,
-                null // <<< Truyền null
+                null 
             );
         }
 
         if (banhMi != null) {
-             // Sản phẩm không có size
+
              createProductIfNotFound(
-                 "Bánh Mì Xúc Xích Phô Mai", "banh-mi-xuc-xich-phomai",
+                 "Bánh Mì Xúc Xích Phô Mai", 
                  "Bánh mì mềm kẹp xúc xích và phô mai tan chảy.",
                  new BigDecimal("25000.00"),
-                 "/img/products/banh_mi_xuc_xich_pho_mai.jpg", // <<< Đảm bảo ảnh này tồn tại
+                 "/img/products/banh_mi_xuc_xich_pho_mai.jpg", 
                  banhMi,
-                 null // <<< Truyền null
+                 null
              );
         }
 
         if (cookies != null) {
              // Sản phẩm không có size
              createProductIfNotFound(
-                 "Cookies Socola Chip", "cookies-socola-chip",
+                 "Cookies Socola Chip", 
                  "Bánh quy bơ giòn rụm với hạt socola.",
                  new BigDecimal("15000.00"),
-                 "/img/products/banh_quy_socola.png", // <<< Đảm bảo ảnh này tồn tại
+                 "/img/products/banh_quy_socola.png", 
                  cookies,
-                 null // <<< Truyền null
+                 null 
              );
         }
 
@@ -174,23 +162,6 @@ public class DataLoader implements CommandLineRunner {
     }
 
     
-
-     @Transactional
-     Product createProductIfNotFound(String name, String slug, String description, BigDecimal price, String imageUrl, Category category) {
-         Optional<Product> prodOpt = productRepository.findByName(slug);
-         if (prodOpt.isEmpty()) {
-             Product newProduct = new Product();
-             newProduct.setName(name);
-             newProduct.setDescription(description);
-             newProduct.setPrice(price);
-             newProduct.setImageUrl(imageUrl); // Đảm bảo ảnh có tồn tại trong static/img hoặc là URL thật
-             newProduct.setCategory(category);
-             newProduct.setIsAvailable(true);
-             log.info("Creating product: {}", name);
-             return productRepository.save(newProduct);
-         }
-         return prodOpt.get();
-     }
     @Transactional
     Category createCategoryIfNotFound(String name, String description) {
          Optional<Category> catOpt = categoryRepository.findByName(name);
