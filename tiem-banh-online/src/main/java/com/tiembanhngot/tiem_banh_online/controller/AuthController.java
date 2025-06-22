@@ -22,7 +22,7 @@ public class AuthController {
     private UserService userService;
 
     @GetMapping("/login")
-    public String showLoginPage(Model model) { 
+    public String showLoginPage(Model model) {
         model.addAttribute("currentPage", "login");
         return "login";
     }
@@ -41,28 +41,29 @@ public class AuthController {
         return "register";
     }
 
-@PostMapping("/register")
-public String processRegistration(@Valid @ModelAttribute("userDto") UserRegisterDTO userDto,
-                                  BindingResult bindingResult,
-                                  RedirectAttributes redirectAttributes,
-                                  Model model) {
-    model.addAttribute("currentPage", "register");
+    @PostMapping("/register")
+    public String processRegistration(@Valid @ModelAttribute("userDto") UserRegisterDTO userDto,
+            BindingResult bindingResult,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        model.addAttribute("currentPage", "register");
 
-    try {
-        if (!bindingResult.hasErrors()) {
-            userService.registerNewUser(userDto, bindingResult);
-        }
+        try {
+            if (!bindingResult.hasErrors()) {
+                userService.registerNewUser(userDto, bindingResult);
+            }
 
-        if (bindingResult.hasErrors()) {
+            if (bindingResult.hasErrors()) {
+                return "register";
+            }
+
+            redirectAttributes.addFlashAttribute("registrationSuccess",
+                    "Đăng ký tài khoản thành công!<br> Vui lòng đăng nhập.");
+            return "redirect:/login";
+        } catch (Exception e) {
+            model.addAttribute("registrationError", "Đã xảy ra lỗi khi đăng ký: " + e.getMessage());
             return "register";
         }
-
-        redirectAttributes.addFlashAttribute("registrationSuccess", "Đăng ký tài khoản thành công!<br> Vui lòng đăng nhập.");
-        return "redirect:/login";
-    } catch (Exception e) {
-        model.addAttribute("registrationError", "Đã xảy ra lỗi khi đăng ký: " + e.getMessage());
-        return "register";
     }
-}
 
 }
