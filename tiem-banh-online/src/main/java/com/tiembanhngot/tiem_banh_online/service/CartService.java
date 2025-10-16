@@ -75,6 +75,7 @@ public class CartService {
             throw new IllegalStateException(
                     "Product '" + product.getName() + "' has a pricing error. Please contact support.");
         }
+
         // tinh tong gia sp (bao gom chon size, so luong)
         BigDecimal priceToUse = product.getPrice();
         String sizeIdentifier = selectedSize;
