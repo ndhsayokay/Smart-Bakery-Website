@@ -14,13 +14,17 @@ import com.tiembanhngot.tiem_banh_online.entity.Product;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Optional<Product> findByName(String name);
+
     List<Product> findByIsAvailableTrueOrderByCreatedAtDesc();
+
     boolean existsByCategoryCategoryId(Integer categoryId);
 
     @Query("SELECT p FROM Product p WHERE p.isAvailable = true AND " +
-        "(LOWER(p.name) LIKE LOWER(concat('%', :query, '%')) OR " +
-        "LOWER(p.description) LIKE LOWER(concat('%', :query, '%'))) " +
-        "ORDER BY p.name ASC")
+            "(LOWER(p.name) LIKE LOWER(concat('%', :query, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(concat('%', :query, '%'))) " +
+            "ORDER BY p.name ASC")
     List<Product> searchAvailableProducts(@Param("query") String query);
+
+    List<Product> findTop4ByIsAvailableTrueOrderByCreatedAtDesc();
 
 }
