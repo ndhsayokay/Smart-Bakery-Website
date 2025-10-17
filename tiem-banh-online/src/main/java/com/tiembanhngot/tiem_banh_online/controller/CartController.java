@@ -19,10 +19,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.tiembanhngot.tiem_banh_online.dto.CartDTO;
 import com.tiembanhngot.tiem_banh_online.entity.CartItemRequest;
-import com.tiembanhngot.tiem_banh_online.exception.ProductNotFoundException;
 import com.tiembanhngot.tiem_banh_online.service.CartService;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,27 +44,31 @@ public class CartController {
         return "cart";
     }
 
-    @PostMapping("/add")
-    public String addToCart(@RequestParam("productId") Long productId,
-            @RequestParam(value = "quantity", defaultValue = "1") int quantity,
-            @RequestParam(value = "selectedSize", required = false) String selectedSize, HttpSession session,
-            HttpServletRequest request, RedirectAttributes redirectAttributes) {
-        try {
-            cartService.addToCart(productId, quantity, selectedSize, session);
-            redirectAttributes.addFlashAttribute("cartMessageSuccess", "Đã thêm sản phẩm vào giỏ hàng!");
+    // @PostMapping("/add")
+    // public String addToCart(@RequestParam("productId") Long productId,
+    // @RequestParam(value = "quantity", defaultValue = "1") int quantity,
+    // @RequestParam(value = "selectedSize", required = false) String selectedSize,
+    // HttpSession session,
+    // HttpServletRequest request, RedirectAttributes redirectAttributes) {
+    // try {
+    // cartService.addToCart(productId, quantity, selectedSize, session);
+    // redirectAttributes.addFlashAttribute("cartMessageSuccess", "Đã thêm sản phẩm
+    // vào giỏ hàng!");
 
-        } catch (ProductNotFoundException | IllegalArgumentException e) {
-            log.warn("Error adding product {} to cart: {}", productId, e.getMessage());
-            redirectAttributes.addFlashAttribute("cartMessageError", e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error adding product {} to cart.", productId, e);
-            redirectAttributes.addFlashAttribute("cartMessageError", "Unexpected error when adding to cart.");
-        }
-        String referer = request.getHeader("Referer");
-        log.debug("Redirecting back to referrer: {}", referer);
-        return "redirect:" + (referer != null && !referer.contains("/login") && !referer.contains("/register") ? referer
-                : "/products");
-    }
+    // } catch (ProductNotFoundException | IllegalArgumentException e) {
+    // log.warn("Error adding product {} to cart: {}", productId, e.getMessage());
+    // redirectAttributes.addFlashAttribute("cartMessageError", e.getMessage());
+    // } catch (Exception e) {
+    // log.error("Unexpected error adding product {} to cart.", productId, e);
+    // redirectAttributes.addFlashAttribute("cartMessageError", "Unexpected error
+    // when adding to cart.");
+    // }
+    // String referer = request.getHeader("Referer");
+    // log.debug("Redirecting back to referrer: {}", referer);
+    // return "redirect:" + (referer != null && !referer.contains("/login") &&
+    // !referer.contains("/register") ? referer
+    // : "/products");
+    // }
 
     @PostMapping("/update")
     public String updateCartItem(@RequestParam("productId") Long productId, @RequestParam("quantity") int quantity,
@@ -103,27 +105,29 @@ public class CartController {
         return "redirect:/cart";
     }
 
-    @PostMapping("/add/{id}")
-    @ResponseBody
-    public Map<String, Object> addToCart(@PathVariable Long id) {
-        cartService.addToCart(id, 1, null, null);
+    // @PostMapping("/add/{id}")
+    // @ResponseBody
+    // public Map<String, Object> addToCart(@PathVariable Long id) {
+    // cartService.addToCart(id, 1, null, null);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Product added to cart");
+    // Map<String, Object> response = new HashMap<>();
+    // response.put("status", "success");
+    // response.put("message", "Product added to cart");
 
-        return response; // trả JSON
-    }
+    // return response; // trả JSON
+    // }
 
-    @PostMapping("/cart/add")
+    @PostMapping("/add")
     @ResponseBody
     public Map<String, Object> addToCartAjax(@RequestBody CartItemRequest req, HttpSession session) {
         Map<String, Object> result = new HashMap<>();
         try {
-            cartService.addToCart(req.getProductId(), req.getQuantity(), null, session);
+            cartService.addToCart(req.getProductId(), req.getQuantity(), req.getSelectedSize(), session);
             result.put("success", true);
+            result.put("message", "Đã thêm vào giỏ hàng!");
         } catch (Exception e) {
             result.put("success", false);
+            result.put("message", e.getMessage());
         }
         return result;
     }

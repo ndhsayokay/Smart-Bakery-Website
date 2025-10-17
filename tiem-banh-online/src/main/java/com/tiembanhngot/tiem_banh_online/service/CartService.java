@@ -22,108 +22,56 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class CartService {
-    @Autowired
-    private static String CART_SESSION_KEY = "shoppingCart";
+
+    private static final String CART_SESSION_KEY = "shoppingCart";
     @Autowired
     private ProductRepository productRepository;
 
     public CartDTO getCart(HttpSession session) {
-        Object cartObject = session.getAttribute(CART_SESSION_KEY);
-        CartDTO cart = null;
-
-        if (cartObject instanceof CartDTO) {
-            cart = (CartDTO) cartObject;
-            log.trace("Cart found in session [ID: {}]. Items: {}", session.getId(), cart.getTotalItems());
-            if (cart.getItems() == null) {
-                log.warn("Cart found in session but items map is null. Initializing.");
-                cart.setItems(new LinkedHashMap<>());
-            }
-            if (cart.getTotalAmount() == null) {
-                log.warn("Cart found in session but totalAmount is null. Initializing to ZERO.");
-                cart.setTotalAmount(BigDecimal.ZERO);
-            }
-        }
-
+        CartDTO cart = (CartDTO) session.getAttribute(CART_SESSION_KEY);
         if (cart == null) {
-            log.info("No cart found in session [ID: {}]. Creating a new cart.", session.getId());
             cart = new CartDTO();
             cart.setItems(new LinkedHashMap<>());
             cart.setTotalAmount(BigDecimal.ZERO);
             cart.setTotalItems(0);
             session.setAttribute(CART_SESSION_KEY, cart);
-            log.debug("New empty cart created and stored in session [ID: {}].", session.getId());
         }
         return cart;
     }
 
     @Transactional(readOnly = true)
-    public void addToCart(Long productId, int quantity, String selectedSize, HttpSession session) {
-        if (quantity <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than 0.");
-        }
+    public CartDTO addToCart(Long productId, int quantity, String selectedSize, HttpSession session) {
+        if (quantity <= 0)
+            throw new IllegalArgumentException("Quantity must be > 0");
 
         CartDTO cart = getCart(session);
-        // tim sp
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("Không tìm thấy sản phẩm với ID: " + productId));
-        // lay sp
-        if (!Boolean.TRUE.equals(product.getIsAvailable())) {
-            throw new IllegalArgumentException("Product '" + product.getName() + "' is currently unavailable.");
-        }
-        // lay gia sp
-        if (product.getPrice() == null) {
-            throw new IllegalStateException(
-                    "Product '" + product.getName() + "' has a pricing error. Please contact support.");
-        }
 
-        // tinh tong gia sp (bao gom chon size, so luong)
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Không tìm thấy sản phẩm ID: " + productId));
+
+        if (!Boolean.TRUE.equals(product.getIsAvailable()))
+            throw new IllegalArgumentException("Product '" + product.getName() + "' hiện không khả dụng");
+
         BigDecimal priceToUse = product.getPrice();
         String sizeIdentifier = selectedSize;
 
-        if (StringUtils.hasText(selectedSize) && product.getSizeOptions() != null
-                && !product.getSizeOptions().isEmpty()) {
+        // Xử lý size
+        if (StringUtils.hasText(selectedSize) && product.getSizeOptions() != null) {
             if (product.getSizeOptions().containsKey(selectedSize)) {
                 priceToUse = product.getSizeOptions().get(selectedSize);
-
-                if (priceToUse == null) {
-                    log.error("Price for selected size '{}' of product ID {} is NULL.", selectedSize, productId);
-                    throw new IllegalStateException(
-                            "Product '" + product.getName() + "' has a pricing error for the selected size.");
-                }
             } else {
-                log.warn("Invalid size '{}' selected for product ID {}. Using default price {}.", selectedSize,
-                        productId, product.getPrice());
-                sizeIdentifier = null;
-                priceToUse = product.getPrice();
-                if (priceToUse == null) {
-                    log.error("Default price for product ID {} is NULL.", productId);
-                    throw new IllegalStateException("Product '" + product.getName() + "' has a pricing error.");
-                }
+                sizeIdentifier = null; // fallback
             }
         } else {
             sizeIdentifier = null;
-            priceToUse = product.getPrice();
-            if (priceToUse == null) {
-                log.error("Default price for product ID {} is NULL.", productId);
-                throw new IllegalStateException("Product '" + product.getName() + "' has a pricing error.");
-            }
         }
 
-        String itemKey = String.valueOf(productId);
-        if (StringUtils.hasText(sizeIdentifier)) {
-            itemKey += "_" + sizeIdentifier;
-        }
+        String itemKey = productId + (sizeIdentifier != null ? "_" + sizeIdentifier : "");
 
         CartItemDTO existingItem = cart.getItems().get(itemKey);
-
         if (existingItem != null) {
-            log.debug(
-                    "Updating quantity for existing item with key {} (Product ID {}) in cart [Session: {}]. Old quantity: {}, Add quantity: {}",
-                    itemKey, productId, session.getId(), existingItem.getQuantity(), quantity);
             existingItem.setQuantity(existingItem.getQuantity() + quantity);
         } else {
-            log.debug("Adding new item with key {} (Product ID {}) to cart [Session: {}] with quantity: {}",
-                    itemKey, productId, session.getId(), quantity);
             CartItemDTO newItem = new CartItemDTO();
             newItem.setProductId(product.getProductId());
             newItem.setName(product.getName());
@@ -136,9 +84,10 @@ public class CartService {
 
         updateCartTotals(cart);
 
-        log.info(
-                "Cart updated after adding/updating item with key {} (Product ID {}). Session ID: {}. Total items: {}, Total amount: {}",
-                itemKey, productId, session.getId(), cart.getTotalItems(), cart.getTotalAmount());
+        // **Bắt buộc set lại session để chắc chắn**
+        session.setAttribute(CART_SESSION_KEY, cart);
+
+        return cart; // trả về luôn để AJAX render
     }
 
     public void updateQuantity(Long productId, int quantity, String selectedSize, HttpSession session) {
@@ -210,42 +159,18 @@ public class CartService {
         return getCart(session).getTotalAmount();
     }
 
-    private void updateCartTotals(CartDTO cart) {
-        if (cart == null) {
-            log.error("Cannot update totals for a null cart.");
-            return;
-        }
-        log.debug("Recalculating totals for cart...");
+    public void updateCartTotals(CartDTO cart) {
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        int totalItems = 0;
 
-        BigDecimal calculatedTotalAmount = BigDecimal.ZERO;
-        int calculatedTotalItems = 0;
-
-        if (cart.getItems() != null) {
-            for (CartItemDTO item : cart.getItems().values()) {
-                if (item != null && item.getPrice() != null && item.getQuantity() > 0) {
-                    try {
-                        BigDecimal lineTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())); // gia
-                                                                                                                 // ca *
-                                                                                                                 // so
-                                                                                                                 // luong
-                        item.setLineTotal(lineTotal);
-                        calculatedTotalAmount = calculatedTotalAmount.add(lineTotal);
-                        calculatedTotalItems += item.getQuantity();
-                    } catch (ArithmeticException e) {
-                        log.error("ArithmeticException for item productId: {}", item.getProductId(), e);
-                        item.setLineTotal(BigDecimal.ZERO);
-                    }
-                } else {
-                    log.warn("Skipping item total calculation due to invalid data: {}", item);
-                    if (item != null)
-                        item.setLineTotal(BigDecimal.ZERO);
-                }
-            }
-        } else {
-            log.warn("Cart items map is null. Totals will be zero.");
+        for (CartItemDTO item : cart.getItems().values()) {
+            BigDecimal lineTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            item.setLineTotal(lineTotal);
+            totalAmount = totalAmount.add(lineTotal);
+            totalItems += item.getQuantity();
         }
-        cart.setTotalAmount(calculatedTotalAmount);
-        cart.setTotalItems(calculatedTotalItems);
-        log.info("Cart totals recalculated: Items={}, Amount={}", cart.getTotalItems(), cart.getTotalAmount());
+
+        cart.setTotalAmount(totalAmount);
+        cart.setTotalItems(totalItems);
     }
 }
