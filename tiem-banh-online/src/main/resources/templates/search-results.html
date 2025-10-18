@@ -53,7 +53,7 @@
               class="card h-100 product-card shadow-sm border-light text-center"
             >
               <a
-                th:href="@{/products/{name}(name=${product.name})}"
+                th:href="@{/products/{id}(id=${product.productId})}"
                 class="product-card-img-wrapper"
               >
                 <img
@@ -65,7 +65,7 @@
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title product-name mb-1 fs-6">
                   <a
-                    th:href="@{/products/{name}(name=${product.name})}"
+                    th:href="@{/products/{id}(id=${product.productId})}"
                     th:text="${product.name}"
                     class="product-link"
                     >Tên sản phẩm</a
@@ -85,6 +85,7 @@
                     th:action="@{/cart/add}"
                     method="post"
                     class="d-inline me-2"
+                    onsubmit="return addToCart(event)"
                   >
                     <input
                       type="hidden"
@@ -106,7 +107,7 @@
                     </button>
                   </form>
                   <a
-                    th:href="@{/products/{name}(name=${product.name})}"
+                    th:href="@{/products/{id}(id=${product.productId})}"
                     class="btn btn-sm btn-link text-secondary p-1"
                     title="Xem chi tiết"
                   >
@@ -118,7 +119,77 @@
           </div>
         </div>
       </main>
+      <script>
+        async function addToCart(event) {
+          event.preventDefault(); // chặn reload trang
+
+          const form = event.target;
+          const productId = form.querySelector('input[name="productId"]').value;
+          const token = document.querySelector('meta[name="_csrf"]').content;
+          const header = document.querySelector(
+            'meta[name="_csrf_header"]'
+          ).content;
+
+          try {
+            const response = await fetch("/cart/add", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [header]: token,
+              },
+              body: JSON.stringify({
+                productId: productId,
+                quantity: 1,
+                selectedSize: null,
+              }),
+            });
+
+            if (!response.ok) {
+              showToast("Có lỗi từ máy chủ, vui lòng thử lại sau.", true);
+              return false;
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+              const cartCount = document.getElementById("cart-count");
+              if (cartCount) {
+                cartCount.textContent = data.totalItems;
+                if (data.totalItems > 0 && cartCount.style.display === "none") {
+                  cartCount.style.display = "";
+                }
+              }
+              showToast(data.message || "Đã thêm sản phẩm vào giỏ!");
+            } else {
+              showToast(data.message || "Lỗi khi thêm sản phẩm.", true);
+            }
+          } catch (err) {
+            // 4. Xử lý lỗi mạng (mất kết nối)
+            console.error(err);
+            showToast("Vui lòng đăng nhập để đặt hàng.", true);
+            setTimeout(() => {
+              window.location.href = "/login";
+            }, 1500);
+            return false;
+          }
+        } // Hàm hiển thị thông báo
+
+        function showToast(message, isError = false) {
+          const toast = document.createElement("div");
+          toast.textContent = message;
+          toast.className =
+            "toast-message " + (isError ? "bg-danger" : "bg-success");
+          toast.style.position = "fixed";
+          toast.style.bottom = "20px";
+          toast.style.right = "20px";
+          toast.style.color = "#fff";
+          toast.style.padding = "10px 15px";
+          toast.style.borderRadius = "6px";
+          toast.style.zIndex = "9999";
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 2500);
+        }
+      </script>
     </div>
-    <!-- end layout fragment -->
   </body>
 </html>

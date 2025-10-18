@@ -165,20 +165,29 @@
             },
             body: JSON.stringify({ productId: productId, quantity: 1 }),
           });
-
           const data = await response.json();
 
           if (data.success) {
-            //const cartCount = document.getElementById("cart-count");
-            //if (cartCount) cartCount.textContent = data.totalItems;
+            const cartCount = document.getElementById("cart-count");
+            if (cartCount) {
+              // 1. Cập nhật số lượng
+              cartCount.textContent = data.totalItems;
 
+              // 2. Hiển thị badge nếu nó đang bị ẩn (từ 0 lên 1)
+              if (data.totalItems > 0 && cartCount.style.display === "none") {
+                cartCount.style.display = ""; // Bỏ thuộc tính 'display: none'
+              }
+            }
             showToast("Đã thêm sản phẩm vào giỏ!");
           } else {
             showToast("Lỗi khi thêm sản phẩm.", true);
           }
         } catch (err) {
           console.error(err);
-          showToast("Không thể kết nối server.", true);
+          showToast("Vui lòng đăng nhập để đặt hàng.", true);
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 1500);
         }
 
         return false;

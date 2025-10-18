@@ -111,6 +111,7 @@ public class CartService {
                 cart.getItems().remove(itemKeyToFind);
             }
             updateCartTotals(cart);
+            session.setAttribute(CART_SESSION_KEY, cart);
             log.info("Cart updated after quantity change for item with key {}. Total items: {}, Total amount: {}",
                     itemKeyToFind, cart.getTotalItems(), cart.getTotalAmount());
         } else {
@@ -128,6 +129,7 @@ public class CartService {
         if (removedItem != null) {
             log.debug("Successfully removed product ID {} from cart.", productId);
             updateCartTotals(cart); // xoa sp khoi cart va tinh lai tien
+            session.setAttribute(CART_SESSION_KEY, cart);
 
         } else {
             throw new IllegalArgumentException("Sản phẩm không tồn tại trong giỏ hàng để xóa.");

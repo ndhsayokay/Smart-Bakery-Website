@@ -273,6 +273,22 @@
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
       <script>
+        function showToast(message, isError = false) {
+          const toast = document.createElement("div");
+          toast.textContent = message;
+          toast.className =
+            "toast-message " + (isError ? "bg-danger" : "bg-success");
+          toast.style.position = "fixed";
+          toast.style.bottom = "20px";
+          toast.style.right = "20px";
+          toast.style.color = "#fff";
+          toast.style.padding = "10px 15px";
+          toast.style.borderRadius = "6px";
+          toast.style.zIndex = "9999";
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 2500);
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
           const form = document.getElementById("add-to-cart-form");
           const tokenMeta = document.querySelector('meta[name="_csrf"]');
@@ -292,7 +308,8 @@
             const sizeInput = form.querySelector(
               "input[name='selectedSize']:checked"
             );
-            const selectedSize = sizeInput ? sizeInput.value : "DEFAULT";
+
+            const selectedSize = sizeInput ? sizeInput.value : null;
 
             const token = tokenMeta?.content || "";
             const header = headerMeta?.content || "X-CSRF-TOKEN";
@@ -307,28 +324,38 @@
                 body: JSON.stringify({
                   productId: productId,
                   quantity: parseInt(quantity),
-                  size: selectedSize,
+                  selectedSize: selectedSize,
                 }),
               });
 
-              if (response.ok) {
-                const data = await response.json();
+              if (!response.ok) {
+                showToast("Có lỗi từ máy chủ, vui lòng thử lại sau.", true);
+                return;
+              }
+              const data = await response.json();
 
-                // Hiển thị Bootstrap toast
-                const toastEl = document.getElementById("cart-toast");
-                const toast = new bootstrap.Toast(toastEl, { delay: 2000 });
-                toast.show();
-
-                // Cập nhật số lượng giỏ hàng trên icon navbar
+              if (data.success) {
                 const cartCount = document.getElementById("cart-count");
-                if (cartCount && data.totalItems != null) {
+                if (cartCount) {
                   cartCount.textContent = data.totalItems;
+                  if (
+                    data.totalItems > 0 &&
+                    cartCount.style.display === "none"
+                  ) {
+                    cartCount.style.display = "";
+                  }
                 }
+                showToast(data.message || "Đã thêm sản phẩm vào giỏ!");
               } else {
-                console.error("Thêm vào giỏ thất bại!");
+                showToast(data.message || "Lỗi khi thêm sản phẩm.", true);
               }
             } catch (error) {
               console.error("Lỗi khi thêm sản phẩm:", error);
+              showToast("Vui lòng đăng nhập để đặt hàng.", true);
+              setTimeout(() => {
+                window.location.href = "/login";
+              }, 1500);
+              return;
             }
           });
         });

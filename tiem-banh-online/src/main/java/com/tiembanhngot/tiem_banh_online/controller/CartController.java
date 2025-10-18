@@ -4,6 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.SessionAttributes;
+import org.springframework.web.bind.support.SessionStatus;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.tiembanhngot.tiem_banh_online.dto.CartDTO;
@@ -43,32 +49,6 @@ public class CartController {
         model.addAttribute("cart", cart);
         return "cart";
     }
-
-    // @PostMapping("/add")
-    // public String addToCart(@RequestParam("productId") Long productId,
-    // @RequestParam(value = "quantity", defaultValue = "1") int quantity,
-    // @RequestParam(value = "selectedSize", required = false) String selectedSize,
-    // HttpSession session,
-    // HttpServletRequest request, RedirectAttributes redirectAttributes) {
-    // try {
-    // cartService.addToCart(productId, quantity, selectedSize, session);
-    // redirectAttributes.addFlashAttribute("cartMessageSuccess", "Đã thêm sản phẩm
-    // vào giỏ hàng!");
-
-    // } catch (ProductNotFoundException | IllegalArgumentException e) {
-    // log.warn("Error adding product {} to cart: {}", productId, e.getMessage());
-    // redirectAttributes.addFlashAttribute("cartMessageError", e.getMessage());
-    // } catch (Exception e) {
-    // log.error("Unexpected error adding product {} to cart.", productId, e);
-    // redirectAttributes.addFlashAttribute("cartMessageError", "Unexpected error
-    // when adding to cart.");
-    // }
-    // String referer = request.getHeader("Referer");
-    // log.debug("Redirecting back to referrer: {}", referer);
-    // return "redirect:" + (referer != null && !referer.contains("/login") &&
-    // !referer.contains("/register") ? referer
-    // : "/products");
-    // }
 
     @PostMapping("/update")
     public String updateCartItem(@RequestParam("productId") Long productId, @RequestParam("quantity") int quantity,
@@ -99,37 +79,39 @@ public class CartController {
     }
 
     @PostMapping("/clear")
-    public String clearCart(HttpSession session, RedirectAttributes redirectAttributes) {
+    public String clearCart(HttpSession session, RedirectAttributes redirectAttributes, SessionStatus sessionStatus) {
         cartService.clearCart(session);
+        sessionStatus.setComplete();
         redirectAttributes.addFlashAttribute("cartMessageSuccess", "Giỏ hàng đã được xóa thành công.");
         return "redirect:/cart";
     }
 
-    // @PostMapping("/add/{id}")
-    // @ResponseBody
-    // public Map<String, Object> addToCart(@PathVariable Long id) {
-    // cartService.addToCart(id, 1, null, null);
-
-    // Map<String, Object> response = new HashMap<>();
-    // response.put("status", "success");
-    // response.put("message", "Product added to cart");
-
-    // return response; // trả JSON
-    // }
-
     @PostMapping("/add")
     @ResponseBody
-    public Map<String, Object> addToCartAjax(@RequestBody CartItemRequest req, HttpSession session) {
+    public ResponseEntity<Object> addToCartAjax(@RequestBody CartItemRequest req, HttpSession session) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication instanceof AnonymousAuthenticationToken) {
+            return new ResponseEntity<>("Vui lòng đăng nhập để thêm vào giỏ hàng", HttpStatus.UNAUTHORIZED);
+        }
+
         Map<String, Object> result = new HashMap<>();
         try {
             cartService.addToCart(req.getProductId(), req.getQuantity(), req.getSelectedSize(), session);
+            int totalItems = cartService.getCartItemCount(session);
+
             result.put("success", true);
             result.put("message", "Đã thêm vào giỏ hàng!");
+            result.put("totalItems", totalItems);
+
+            return ResponseEntity.ok(result);
+
         } catch (Exception e) {
             result.put("success", false);
             result.put("message", e.getMessage());
+
+            return ResponseEntity.badRequest().body(result);
         }
-        return result;
     }
 
 }
